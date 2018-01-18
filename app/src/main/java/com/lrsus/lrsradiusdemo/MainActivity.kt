@@ -1,56 +1,102 @@
+/**
+ * MainActivity.kt
+ * Copyright 2018 Long Range Systems, LLC
+ */
 package com.lrsus.lrsradiusdemo
 
+import android.app.Service
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
+import android.os.IBinder
 import android.widget.TextView
 import android.widget.Toast
 import android.widget.ToggleButton
-import org.altbeacon.beacon.BeaconTransmitter
-import org.altbeacon.beacon.BeaconParser
-import org.altbeacon.beacon.Beacon
 import java.util.*
 
 class MainActivity : AppCompatActivity() {
 
-    private var mBroadcastId: Int = 0
-    private val mOrgUUID: String = "96B68E44-D14D-428B-9237-082B6C04623F"
-    private var mAltBeaconTransmitter : BeaconTransmitter? = null
-    private var mBeacon : Beacon? = null
-    private var mBeaconParser : BeaconParser? = null
+    private var broadcastServiceBinder : BroadcastService.BroadcastServiceBinder? = null
+    private var broadcastService : BroadcastService? = null
+    private var mServiceRunning = false
+    private var mService : Intent? = null
+
+    // UI
+    private var broadcastIdView : TextView? = null
+    private var broadcastToggle : ToggleButton? = null
+
+    private val mConnection = object : ServiceConnection {
+        override fun onServiceDisconnected(name: ComponentName?) {
+            mServiceRunning = false
+        }
+
+        override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
+            broadcastServiceBinder = service as BroadcastService.BroadcastServiceBinder?
+            broadcastService = broadcastServiceBinder?.getService()
+            mServiceRunning = true
+            broadcastIdView?.text = broadcastService?.serviceNumber.toString()
+        }
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-        val random = Random()
-        val broadcastIdView = findViewById(R.id.broadcastIdView) as TextView
-        val broadcastToggle = findViewById(R.id.broadcastSwitch) as ToggleButton
+        broadcastIdView = findViewById(R.id.broadcastIdView) as TextView
+        broadcastToggle = findViewById(R.id.broadcastSwitch) as ToggleButton
+    }
 
-        // Generate beacon ID
-        if (BroadcastService.mBroadcastId == 0) {
-            BroadcastService.mBroadcastId = random.nextInt(65535) + 1
-            broadcastIdView.text = BroadcastService.mBroadcastId.toString()
-        }
+    override fun onStart() {
+        super.onStart()
 
         val broadcastEnableText = Toast.makeText(applicationContext, "Broadcasting enabled.", Toast.LENGTH_SHORT)
         val broadcastDisableText = Toast.makeText(applicationContext, "Broadcasting disabled.", Toast.LENGTH_SHORT)
 
-        broadcastToggle.setOnCheckedChangeListener { _, isChecked ->
-            val service : Intent = Intent(this@MainActivity, BroadcastService::class.java)
+        if (mService == null) {
+            mService = Intent(this@MainActivity, BroadcastService::class.java)
+        }
 
+        broadcastToggle?.setOnCheckedChangeListener { _, isChecked ->
             if (isChecked) {
                 broadcastDisableText.cancel()
                 broadcastEnableText.show()
-                service.action = Constants.ACTION.STARTFOREGROUND_ACTION
+
+                mService?.action = Constants.ACTION.STARTFOREGROUND_ACTION
                 BroadcastService.IS_SERVICE_RUNNING = true;
+
+                if (!mServiceRunning) {
+                    startService(mService)
+                    bindService(mService, mConnection, Context.BIND_AUTO_CREATE)
+                } else {
+                    val serviceNumber : Int? = broadcastService?.serviceNumber
+
+                    // As service is starting, we may not get a service number.
+                    if (serviceNumber != null) {
+                        broadcastIdView?.text = broadcastService?.serviceNumber.toString()
+                    }
+                }
             } else {
                 broadcastEnableText.cancel()
                 broadcastDisableText.show()
-                service.action = Constants.ACTION.STOPFOREGROUND_ACTION
+
+                mService?.action = Constants.ACTION.STOPFOREGROUND_ACTION
                 BroadcastService.IS_SERVICE_RUNNING = false;
+
+                broadcastIdView?.text = ""
+                stopService(mService)
+                unbindService(mConnection)
+                mServiceRunning = false
             }
 
-            startService(service)
         }
+    }
+
+    override fun onStop() {
+        super.onStop()
+        unbindService(mConnection)
+        stopService(mService)
+        mServiceRunning = true
     }
 }

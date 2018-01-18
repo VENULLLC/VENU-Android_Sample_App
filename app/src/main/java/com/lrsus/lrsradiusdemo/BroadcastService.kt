@@ -1,56 +1,42 @@
+/**
+ * BroadcastService.kt
+ * Copyright 2018 Long Range Systems, LLC
+ */
 package com.lrsus.lrsradiusdemo
 
+import com.lrsus.venusdk.VenuBroadcast
 import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import android.util.Log
 import android.widget.Toast
 import android.app.PendingIntent
+import android.os.Binder
 import android.support.v4.app.NotificationCompat
-import org.altbeacon.beacon.BeaconTransmitter
-import org.altbeacon.beacon.BeaconParser
-import org.altbeacon.beacon.Beacon
-import java.util.*
 
 
-/**
- * Created by fali on 1/11/18.
- */
 class BroadcastService : Service() {
 
+    private val mBinder : IBinder = BroadcastServiceBinder()
     private val LOG_TAG : String = "BroadcastService"
-    private val mOrgUUID: String = "96B68E44-D14D-428B-9237-082B6C04623F"
-    private var mAltBeaconTransmitter : BeaconTransmitter? = null
-    private var mBeacon : Beacon? = null
-    private var mBeaconParser : BeaconParser? = null
+    private val mOrgUUID: String = "5241444e-5441-424c-4553-455256494345"
+    private var venuBroadcast : VenuBroadcast? = null
+    var serviceNumber : Int? = null
 
     companion object {
         var IS_SERVICE_RUNNING : Boolean = false
-        var mBroadcastId: Int = 0
+    }
+
+    inner class BroadcastServiceBinder : Binder() {
+        fun getService() : BroadcastService {
+            return this@BroadcastService
+        }
     }
 
     override fun onCreate() {
-        val random = Random()
-
-        // Generate beacon ID
-        if (mBroadcastId == 0) {
-            mBroadcastId = random.nextInt(65535) + 1
+        if (venuBroadcast == null) {
+            venuBroadcast = VenuBroadcast(applicationContext, mOrgUUID, 2)
         }
-
-        mBeaconParser = BeaconParser().setBeaconLayout("m:2-3=0215,i:4-19,i:20-21,i:22-23,p:24-24")
-
-        mBeacon = Beacon.Builder()
-                .setId1(mOrgUUID)
-                .setId2(mBroadcastId.toString())
-                .setId3("2")
-                .setManufacturer(0x004c)
-                .setBeaconTypeCode(0x1502)
-                .setTxPower(-56)
-                .build() as Beacon?
-
-        mAltBeaconTransmitter = BeaconTransmitter(applicationContext, mBeaconParser) as BeaconTransmitter?
-        mAltBeaconTransmitter?.setBeacon(mBeacon)
-
         super.onCreate()
     }
 
@@ -59,14 +45,15 @@ class BroadcastService : Service() {
             Log.i(LOG_TAG, "Received Start Foreground Intent ")
             showNotification()
             Toast.makeText(this, "Service Started!", Toast.LENGTH_SHORT).show()
-            mAltBeaconTransmitter?.startAdvertising()
+            venuBroadcast?.start()
+            serviceNumber = venuBroadcast?.serviceNumber
         } else if (intent?.action.equals(Constants.ACTION.BROADCAST_ACTION)) {
             Log.i(LOG_TAG, "Clicked Broadcast");
             Toast.makeText(this, "Clicked Broadcast!", Toast.LENGTH_SHORT).show()
         } else if (intent?.action.equals(
                 Constants.ACTION.STOPFOREGROUND_ACTION)) {
             Log.i(LOG_TAG, "Received Stop Foreground Intent")
-            mAltBeaconTransmitter?.stopAdvertising()
+            venuBroadcast?.stop()
             stopForeground(true)
             stopSelf()
         }
@@ -105,10 +92,10 @@ class BroadcastService : Service() {
         super.onDestroy()
         Log.i(LOG_TAG, "In onDestroy")
         Toast.makeText(this, "Service Destroyed!", Toast.LENGTH_SHORT).show()
-        mAltBeaconTransmitter?.stopAdvertising()
+        venuBroadcast?.stop()
     }
 
     override fun onBind(intent: Intent?): IBinder {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+        return mBinder
     }
 }

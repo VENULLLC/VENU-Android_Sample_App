@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/LRSRadiusDemo.iml" filepath="$PROJECT_DIR$/LRSRadiusDemo.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
+      <module fileurl="file://$PROJECT_DIR$/venusdk/venusdk.iml" filepath="$PROJECT_DIR$/venusdk/venusdk.iml" />
     </modules>
   </component>
 </project>
