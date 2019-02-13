@@ -22,6 +22,7 @@ import android.app.PendingIntent
 import android.bluetooth.le.AdvertiseCallback
 import android.os.Build
 import android.support.v4.app.NotificationCompat
+import com.android.volley.Request
 import com.lrsus.venusdk.*
 import java.util.*
 
@@ -43,6 +44,8 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
     private var broadcastIdView : TextView? = null
     private var broadcastToggle : ToggleButton? = null
     private lateinit var rangeView : TextView
+    private lateinit var service : VENUService
+
 
     /**
      * Set up service connection so we can set up the callbacks for VENURange
@@ -151,6 +154,11 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
         broadcastIdView = findViewById(R.id.broadcastIdView) as TextView
         broadcastToggle = findViewById(R.id.broadcastSwitch) as ToggleButton
         rangeView = findViewById(R.id.beaconDistance)
+        service = VENUService.getInstance(
+                applicationContext,
+                getString(R.string.APP_ID).replace("\n", ""),
+                getString(R.string.APP_SECRET).replace("\n", "")
+        )
         createNotificationChannel()
     }
 
