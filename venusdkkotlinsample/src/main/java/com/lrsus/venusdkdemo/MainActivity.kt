@@ -155,7 +155,7 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
         broadcastToggle = findViewById(R.id.broadcastSwitch) as ToggleButton
         rangeView = findViewById(R.id.beaconDistance)
         service = VENUService.getInstance(
-                applicationContext,
+                this,
                 getString(R.string.APP_ID).replace("\n", ""),
                 getString(R.string.APP_SECRET).replace("\n", "")
         )
