@@ -3,6 +3,7 @@
   <component name="ProjectModuleManager">
     <modules>
       <module fileurl="file://$PROJECT_DIR$/LRSRadiusDemo.iml" filepath="$PROJECT_DIR$/LRSRadiusDemo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/VENUAndroidDemo.iml" filepath="$PROJECT_DIR$/VENUAndroidDemo.iml" />
       <module fileurl="file://$PROJECT_DIR$/venusdk/venusdk.iml" filepath="$PROJECT_DIR$/venusdk/venusdk.iml" />
       <module fileurl="file://$PROJECT_DIR$/venusdkjavasample/venusdkjavasample.iml" filepath="$PROJECT_DIR$/venusdkjavasample/venusdkjavasample.iml" />
       <module fileurl="file://$PROJECT_DIR$/venusdkkotlinsample/venusdkkotlinsample.iml" filepath="$PROJECT_DIR$/venusdkkotlinsample/venusdkkotlinsample.iml" />
