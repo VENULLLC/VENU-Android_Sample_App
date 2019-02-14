@@ -7,7 +7,7 @@ import android.os.Build;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 
-import com.lrsus.venusdk.VENUDiscoveryReceiver;
+import com.lrsus.venusdk.VENUMonitor;
 
 import java.util.Random;
 import java.util.UUID;
@@ -16,7 +16,7 @@ import java.util.UUID;
  * For the main application, we show a notification when the BRAND_ID is heard
  * from the phone.
  */
-public class MainApplication extends VENUDiscoveryReceiver {
+public class MainApplication extends VENUMonitor {
 
     // Replace the following as necessary per brand and configuration.
     static String APP_NAMESPACE = "com.lrsus.venusdkjavasample";

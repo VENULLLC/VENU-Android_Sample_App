@@ -1,5 +1,6 @@
 package com.lrsus.venusdkdemo
 
+import android.app.Application
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -8,17 +9,19 @@ import android.content.Intent
 import android.os.Build
 import android.support.v4.app.NotificationCompat
 import android.support.v4.app.NotificationManagerCompat
-import com.lrsus.venusdk.VENUDiscoveryReceiver
+import com.lrsus.venusdk.VENUMonitor
+import com.lrsus.venusdk.VENUMonitorHandler
 import java.util.*
 
 /**
- * Extending VENUDiscoveryReceiver enables an Application to respond to BLE advertisements
+ * Extending VENUMonitor enables an Application to respond to BLE advertisements
  * coming from the VENU system from the background. In this example, we are only starting a
  * notification in order to spur the user to open the app. They are free to ignore the notification,
  * especially in the case that they are only passing by the location in question.
  *
  */
-class MainApplication : VENUDiscoveryReceiver() {
+class MainApplication : Application(), VENUMonitorHandler {
+    private lateinit var venuMonitor: VENUMonitor
 
     companion object {
         private var activityRunning : Boolean = false
@@ -45,6 +48,8 @@ class MainApplication : VENUDiscoveryReceiver() {
 
         // Establish notification channel for Android 8.0+
         createNotificationChannel()
+
+        venuMonitor = VENUMonitor(this, brandId(), this)
     }
 
     // Copied from Android documentation:
@@ -66,7 +71,7 @@ class MainApplication : VENUDiscoveryReceiver() {
         }
     }
 
-    override fun venuDiscovered(locationId : Int?) {
+    override fun onRegionEntered(locationId : Int?) {
         // MainActivity intent
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent
@@ -92,16 +97,15 @@ class MainApplication : VENUDiscoveryReceiver() {
         }
     }
 
-    override fun appNamespace(): String {
-        return APP_NAMESPACE
+    override fun onRegionExited(locationNumber: Int?) {
+        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
     }
 
     /**
      * Brand ID will match the iBeacon UUID when discovering.
      */
-    override fun brandId(): UUID {
-//        return UUID.fromString("f05b1f5a-646e-4169-b0c6-a50b84c8b624")
-        return UUID.fromString("671d3a8e-ee94-4395-9177-d5382d75ff10")
+    private fun brandId(): UUID {
+        return UUID.fromString(getString(R.string.BRAND_ID))
     }
 
 }

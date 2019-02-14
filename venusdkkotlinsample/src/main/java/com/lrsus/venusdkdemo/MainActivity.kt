@@ -4,21 +4,20 @@
  */
 package com.lrsus.venusdkdemo
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.support.v7.app.AppCompatActivity
 import android.os.Bundle
-import android.os.IBinder
 import android.util.Log
-import android.app.PendingIntent
 import android.bluetooth.le.AdvertiseCallback
 import android.content.*
+import android.content.pm.PackageManager
 import android.os.Build
-import android.support.v4.app.NotificationCompat
+import android.support.v4.app.ActivityCompat
+import android.support.v4.content.ContextCompat
 import android.support.v4.content.LocalBroadcastManager
-import android.view.View
 import android.widget.*
-import com.android.volley.Request
 import com.lrsus.venusdk.*
 import java.util.*
 
@@ -172,6 +171,11 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
         // Mark application as running so we avoid background notifications.
         MainApplication.setActivityRunStatus(true)
 
+         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+             // Request permission
+             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 23523);
+         }
+
         // Bind VENUBroadcast
 //        bindService(
 //                Intent(this@MainActivity, VENUBroadcast::class.java),
@@ -294,8 +298,8 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
         /**
          * Provides location event when detected within a 5-10 meters of the locator/beacon.
          */
-        override fun enteredVENULocation(locationId : UUID, distance : Double, initial : Boolean) {
-            Toast.makeText(applicationContext, "Discovered VENU location", Toast.LENGTH_SHORT).show()
+        override fun onRegionEntered(locationNumber: Int, distance: Double, initial: Boolean) {
+//            Toast.makeText(applicationContext, "Discovered VENU location", Toast.LENGTH_SHORT).show()
 
             runOnUiThread {
                 rangeView.text = String.format("%.2f", distance)
@@ -311,7 +315,7 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
         /**
          * Provides location event when outside of location
          */
-        override fun exitedVENULocation() {
+        override fun onRegionExited() {
             Toast.makeText(applicationContext, "Exited VENU location", Toast.LENGTH_SHORT).show()
 //            if (broadcastService!!.isBroadcasting() == true) {
 //                broadcastService?.stop()

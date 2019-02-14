@@ -132,7 +132,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         @Override
-        public void exitedVENULocation() {
+        public void onRegionExited() {
             // Are we broadcasting?
             if (venuBroadcast.isBroadcasting()) {
                 stopService(new Intent(getApplicationContext(), VENUBroadcast.class));

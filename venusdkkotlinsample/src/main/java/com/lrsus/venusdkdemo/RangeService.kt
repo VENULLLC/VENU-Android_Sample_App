@@ -17,7 +17,6 @@ class RangeService : VENURange() {
     }
 
     override fun brandId(): UUID {
-//        return UUID.fromString("f05b1f5a-646e-4169-b0c6-a50b84c8b624")
-        return UUID.fromString("671d3a8e-ee94-4395-9177-d5382d75ff10")
+        return UUID.fromString(getString(R.string.BRAND_ID))
     }
 }
