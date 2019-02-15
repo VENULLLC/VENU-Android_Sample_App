@@ -8,7 +8,7 @@ android {
     compileSdkVersion 26
     buildToolsVersion '28.0.3'
     defaultConfig {
-        applicationId "com.lrsus.venusdkdemo"
+        applicationId "com.lrsus.venusdkkotlinsample"
         minSdkVersion 15
         targetSdkVersion 26
         versionCode 1

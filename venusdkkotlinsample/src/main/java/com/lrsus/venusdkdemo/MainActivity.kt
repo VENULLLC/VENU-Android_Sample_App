@@ -318,7 +318,7 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
         }
 
         override fun venuService(): VENUService {
-            TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+            return venuService
         }
 
         /**
