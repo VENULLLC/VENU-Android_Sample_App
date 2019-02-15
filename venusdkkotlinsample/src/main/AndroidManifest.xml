@@ -19,7 +19,7 @@
             </intent-filter>
         </activity>
         <service android:name="com.lrsus.venusdk.VENUBroadcast"></service>
-        <service android:name="com.lrsus.venusdkdemo.RangeService"></service>
+        <service android:name="com.lrsus.venusdk.VENURange"></service>
         <service android:name="com.lrsus.venusdk.VENUMessagingService">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />

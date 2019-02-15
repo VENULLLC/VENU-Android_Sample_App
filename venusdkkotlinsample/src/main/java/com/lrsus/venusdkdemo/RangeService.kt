@@ -10,13 +10,14 @@ import java.util.*
  * Once within range of a location, this would eventually offer a service number to which
  * VENUBroadcast can be used.
  */
-class RangeService : VENURange() {
+class RangeService {
 
-    override fun appNamespace(): String {
+    fun appNamespace(): String {
         return MainApplication.APP_NAMESPACE
     }
 
-    override fun brandId(): UUID {
-        return UUID.fromString(getString(R.string.BRAND_ID))
+    fun brandId(): UUID {
+//        return UUID.fromString(getString(R.string.BRAND_ID))
+        return UUID.randomUUID()
     }
 }

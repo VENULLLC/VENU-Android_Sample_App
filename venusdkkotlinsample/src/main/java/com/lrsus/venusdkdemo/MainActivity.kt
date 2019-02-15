@@ -18,18 +18,16 @@ import android.support.v4.app.ActivityCompat
 import android.support.v4.content.ContextCompat
 import android.support.v4.content.LocalBroadcastManager
 import android.widget.*
+import com.google.android.gms.tasks.OnCompleteListener
+import com.google.firebase.iid.FirebaseInstanceId
 import com.lrsus.venusdk.*
 import java.util.*
 
 
 class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener {
-    private val BRAND_ID = UUID.fromString("671d3a8e-ee94-4395-9177-d5382d75ff10")
     // Callback for services
     private lateinit var mVENUSDKCallback : VENUCallback
-
-    // Library services
-//    private lateinit var broadcastService : VENUBroadcast
-//    private lateinit var rangeService : VENURange
+    private val TAG = "VENUKotlinDemo"
 
     // UI elements
     private var broadcastIdView : TextView? = null
@@ -38,7 +36,12 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
     private lateinit var rangeView : TextView
     private lateinit var venuService : VENUService
     private lateinit var mobileId : UUID
+    private var currentLocationId : Int = 0
+    private var deviceToken : String? = null
 
+    private fun brandId(): UUID {
+        return UUID.fromString(getString(R.string.BRAND_ID))
+    }
 
     /**
      * Set up service connection so we can set up the callbacks for VENURange
@@ -150,9 +153,9 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
             mobileId = uuid
         }
 
-        broadcastIdView = findViewById(R.id.broadcastIdView) as TextView
-        broadcastToggle = findViewById(R.id.broadcastSwitch) as ToggleButton
-        requestServiceButton = findViewById(R.id.requestServiceButton) as Button
+        broadcastIdView = findViewById<TextView>(R.id.broadcastIdView)
+        broadcastToggle = findViewById<ToggleButton>(R.id.broadcastSwitch)
+        requestServiceButton = findViewById<Button>(R.id.requestServiceButton)
         rangeView = findViewById(R.id.beaconDistance)
         venuService = VENUService.getInstance(
                 this,
@@ -173,7 +176,7 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
 
          if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
              // Request permission
-             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 23523);
+             ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION), 23523)
          }
 
         // Bind VENUBroadcast
@@ -190,18 +193,41 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
 
         broadcastToggle?.setOnCheckedChangeListener(this)
 
-//        requestServiceButton.setOnClickListener {
-//            venuService.serviceNumber(this.applicationContext)
-//        }
+        FirebaseInstanceId.getInstance().instanceId
+                .addOnCompleteListener { task ->
+                    if (!task.isSuccessful) {
+                        Log.w(TAG, "Unable to retrieve FCM token ${task.exception}")
+                    } else {
+                        deviceToken = task.getResult()?.token
+                    }
+                }
+
+        requestServiceButton.setOnClickListener {
+            if (currentLocationId > 0) {
+                venuService.serviceNumber(
+                        brandId(),
+                        currentLocationId,
+                        mVENUSDKCallback,
+                        deviceToken
+                )
+            } else {
+                Toast.makeText(applicationContext, "No location detected.", Toast.LENGTH_SHORT).show()
+            }
+        }
 
         LocalBroadcastManager.getInstance(this).registerReceiver(mVENUSDKCallback, IntentFilter("VENU"))
-        startService(Intent(this@MainActivity, RangeService::class.java))
+
+        val rangeIntent = Intent(this@MainActivity, VENURange::class.java)
+        rangeIntent.putExtra("brandId", brandId().toString())
+        startService(rangeIntent)
+
         startService(Intent(this@MainActivity, VENUMessagingService::class.java))
     }
 
     override fun onStop() {
         super.onStop()
 
+        MainApplication.setActivityRunStatus(false)
 //        if (broadcastService == null || !broadcastService!!.isBroadcasting()) {
 //            // Mark activity as not running to restart notifications but only if
 //            // we're no longer broadcasting.
@@ -214,7 +240,7 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
 
 //        unbindService(mBroadcastConnection)
 //        unbindService(mRangeConnection)
-        stopService(Intent(this@MainActivity, RangeService::class.java))
+        stopService(Intent(this@MainActivity, VENURange::class.java))
         stopService(Intent(this@MainActivity, VENUMessagingService::class.java))
     }
 
@@ -298,8 +324,11 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
         /**
          * Provides location event when detected within a 5-10 meters of the locator/beacon.
          */
-        override fun onRegionEntered(locationNumber: Int, distance: Double, initial: Boolean) {
-//            Toast.makeText(applicationContext, "Discovered VENU location", Toast.LENGTH_SHORT).show()
+        override fun onRegionEntered(locationId: Int, distance: Double, initial: Boolean) {
+            if (initial) {
+                Toast.makeText(applicationContext, "Discovered VENU location", Toast.LENGTH_SHORT).show()
+                currentLocationId = locationId
+            }
 
             runOnUiThread {
                 rangeView.text = String.format("%.2f", distance)
@@ -317,6 +346,7 @@ class MainActivity : AppCompatActivity(), CompoundButton.OnCheckedChangeListener
          */
         override fun onRegionExited() {
             Toast.makeText(applicationContext, "Exited VENU location", Toast.LENGTH_SHORT).show()
+            currentLocationId = 0
 //            if (broadcastService!!.isBroadcasting() == true) {
 //                broadcastService?.stop()
 //            }

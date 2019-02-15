@@ -9,6 +9,7 @@ import android.content.Intent
 import android.os.Build
 import android.support.v4.app.NotificationCompat
 import android.support.v4.app.NotificationManagerCompat
+import android.util.Log
 import com.lrsus.venusdk.VENUMonitor
 import com.lrsus.venusdk.VENUMonitorHandler
 import java.util.*
@@ -21,7 +22,6 @@ import java.util.*
  *
  */
 class MainApplication : Application(), VENUMonitorHandler {
-    private lateinit var venuMonitor: VENUMonitor
 
     companion object {
         private var activityRunning : Boolean = false
@@ -43,13 +43,18 @@ class MainApplication : Application(), VENUMonitorHandler {
         }
     }
 
+    /**
+     * Brand ID will match the iBeacon UUID when discovering.
+     */
+    private fun brandId(): UUID {
+        return UUID.fromString(getString(R.string.BRAND_ID))
+    }
+
     override fun onCreate() {
         super.onCreate()
-
         // Establish notification channel for Android 8.0+
         createNotificationChannel()
-
-        venuMonitor = VENUMonitor(this, brandId(), this)
+        VENUMonitor.getInstance(this).startMonitoring(brandId(), this)
     }
 
     // Copied from Android documentation:
@@ -71,7 +76,8 @@ class MainApplication : Application(), VENUMonitorHandler {
         }
     }
 
-    override fun onRegionEntered(locationId : Int?) {
+    override fun onRegionEntered(brandId: UUID?, locationNumber: Int?) {
+        Log.d(TAG, "CALLED")
         // MainActivity intent
         val intent = Intent(this, MainActivity::class.java)
         val pendingIntent = PendingIntent
@@ -90,6 +96,7 @@ class MainApplication : Application(), VENUMonitorHandler {
                 .setAutoCancel(true)
                 .build()
 
+        Log.d(TAG, "is activity running? ${isActivityRunning()}")
         if (!isActivityRunning()) {
             with (NotificationManagerCompat.from(this)) {
                 notify(26234, notification)
@@ -97,15 +104,7 @@ class MainApplication : Application(), VENUMonitorHandler {
         }
     }
 
-    override fun onRegionExited(locationNumber: Int?) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    override fun onRegionExited(brandId: UUID?, locationNumber: Int?) {
+        NotificationManagerCompat.from(this).cancel(26234)
     }
-
-    /**
-     * Brand ID will match the iBeacon UUID when discovering.
-     */
-    private fun brandId(): UUID {
-        return UUID.fromString(getString(R.string.BRAND_ID))
-    }
-
 }
