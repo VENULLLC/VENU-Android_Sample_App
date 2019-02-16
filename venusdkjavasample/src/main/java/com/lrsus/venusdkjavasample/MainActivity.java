@@ -119,7 +119,7 @@ public class MainActivity extends AppCompatActivity {
 
                 // Start broadcast with service number extra
                 Intent broadcastIntent = new Intent(MainActivity.this, VENUBroadcast.class);
-                broadcastIntent.putExtra("ServiceNumber", serviceNumber);
+                broadcastIntent.putExtra("ServiceBroadcast", serviceNumber);
                 startService(broadcastIntent);
             }
 
