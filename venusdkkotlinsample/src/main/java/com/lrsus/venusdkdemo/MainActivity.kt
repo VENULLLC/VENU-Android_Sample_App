@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
 
     // UI elements
     private lateinit var requestServiceButton : Button
+    private lateinit var startOrderButton: Button
     private lateinit var rangeView : TextView
     private lateinit var venuManager : VENUManager
     private lateinit var mobileId : UUID
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         requestServiceButton = findViewById<Button>(R.id.requestServiceButton)
+        startOrderButton = findViewById<Button>(R.id.startOrderButton)
         rangeView = findViewById(R.id.beaconDistance)
         venuManager = VENUManager.getInstance(
                 this,
@@ -91,6 +93,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+        startOrderButton.setOnClickListener {
+            venuManager.getServiceNumber()?.startOrder()
+        }
+
         LocalBroadcastManager.getInstance(this).registerReceiver(mVENUSDKCallback, IntentFilter(VENUManager.VENU_ACTION))
 
         VENURange.startService(this, brandId())
@@ -115,9 +121,13 @@ class MainActivity : AppCompatActivity() {
      */
     inner class VENUCallbackImplementation : VENUCallback() {
         override fun onServiceNumber(serviceNumber: VENUServiceNumber) {
+            val serviceState = serviceNumber.getServiceState()
+            val orderState = serviceNumber.getOrderState()
             runOnUiThread {
                 requestServiceButton.isEnabled = false
-                requestServiceButton.text = serviceNumber.number.toString()
+                requestServiceButton.text = if (serviceState == "pending") "waiting" else serviceNumber.number.toString()
+                startOrderButton.isEnabled = orderState == "pending" && serviceState != "pending"
+                startOrderButton.text = if (orderState == "pending") "Start Order" else "Order Started"
             }
         }
 
@@ -134,12 +144,21 @@ class MainActivity : AppCompatActivity() {
 
         override fun onServiceExpiration(serviceNumber: VENUServiceNumber) {
             Toast.makeText(applicationContext, "${serviceNumber.number} expired", Toast.LENGTH_SHORT).show()
+
+            runOnUiThread {
+                requestServiceButton.isEnabled = true
+                requestServiceButton.text = "Request Service Number"
+            }
+
+            // Stop broadcasting
+            VENUBroadcast.stopService(applicationContext);
         }
 
         override fun onServiceAccepted(serviceNumber: VENUServiceNumber) {
             runOnUiThread {
                 requestServiceButton.isEnabled = false
                 requestServiceButton.text = serviceNumber.number.toString()
+                startOrderButton.isEnabled = true
             }
         }
 
@@ -148,13 +167,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onServiceOrderStarted(serviceNumber: VENUServiceNumber) {
-            Toast.makeText(applicationContext, "${serviceNumber.number} started.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext, "${serviceNumber.number} started.", Toast.LENGTH_LONG).show()
+            startOrderButton.isEnabled = false
+            startOrderButton.text = "Order started"
         }
 
         override fun onServiceCleared(serviceNumber: VENUServiceNumber) {
             runOnUiThread {
                 requestServiceButton.isEnabled = true
                 requestServiceButton.text = "Request Service Number"
+                startOrderButton.text = "Start Order";
+                startOrderButton.isEnabled = false
             }
 
             Toast.makeText(applicationContext, "${serviceNumber.number} cleared.", Toast.LENGTH_SHORT).show()
