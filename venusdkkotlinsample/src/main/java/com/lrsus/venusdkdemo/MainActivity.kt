@@ -81,24 +81,26 @@ class MainActivity : AppCompatActivity() {
                 }
 
         requestServiceButton.setOnClickListener {
-            if (currentLocationId > 0) {
+//            if (currentLocationId > 0) {
                 venuManager.serviceNumber(
                         brandId(),
-                        currentLocationId,
+                        3,
                         mVENUSDKCallback,
                         deviceToken
                 )
-            } else {
-                Toast.makeText(applicationContext, "No location detected.", Toast.LENGTH_SHORT).show()
-            }
+//            } else {
+//                Toast.makeText(applicationContext, "No location detected.", Toast.LENGTH_SHORT).show()
+//            }
         }
 
         startOrderButton.setOnClickListener {
-            venuManager.getServiceNumber()?.startOrder()
+            venuManager.getServiceNumber()?.startOrder();
         }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(mVENUSDKCallback, IntentFilter(VENUManager.VENU_ACTION))
+        // Check for existing service number
+        venuManager.checkForServiceNumber(brandId(), 3, mVENUSDKCallback)
 
+        VENUMessagingService.register(this, mVENUSDKCallback)
         VENURange.startService(this, brandId())
         VENUMessagingService.startService(this)
     }
@@ -112,7 +114,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mVENUSDKCallback)
+        VENUMessagingService.unregister(this, mVENUSDKCallback)
         super.onDestroy()
     }
 
@@ -121,15 +123,22 @@ class MainActivity : AppCompatActivity() {
      */
     inner class VENUCallbackImplementation : VENUCallback() {
         override fun onServiceNumber(serviceNumber: VENUServiceNumber) {
-            val serviceState = serviceNumber.getServiceState()
-            val orderState = serviceNumber.getOrderState()
+            val serviceState = serviceNumber.serviceState
+            val orderState = serviceNumber.orderState
             runOnUiThread {
                 requestServiceButton.isEnabled = false
                 requestServiceButton.text = if (serviceState == "pending") "waiting" else serviceNumber.number.toString()
                 startOrderButton.isEnabled = orderState == "pending" && serviceState != "pending"
                 startOrderButton.text = if (orderState == "pending") "Start Order" else "Order Started"
             }
+
+            VENUBroadcast.startService(applicationContext, serviceNumber.macAddress())
         }
+
+        override fun onNoServiceNumber(brandId: UUID, siteId: Any, mobileId: UUID?) {
+            Toast.makeText(applicationContext, "No existing service number.", Toast.LENGTH_SHORT).show()
+        }
+
 
         override fun onServiceRequested(serviceNumber: VENUServiceNumber) {
             // Service number has been accepted by server, but not by local server
@@ -139,7 +148,7 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Start broadcasting
-            VENUBroadcast.startService(applicationContext, serviceNumber.macAddress());
+            VENUBroadcast.startService(applicationContext, serviceNumber.macAddress())
         }
 
         override fun onServiceExpiration(serviceNumber: VENUServiceNumber) {
@@ -198,8 +207,8 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(applicationContext, "Discovered VENU location", Toast.LENGTH_SHORT).show()
                 currentLocationId = locationId
 
-                // Check for existing service number
-                venuManager.checkForServiceNumber(brandId(), locationId, this)
+//                // Check for existing service number
+//                venuManager.checkForServiceNumber(brandId(), locationId, this)
             }
 
             runOnUiThread {
