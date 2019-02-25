@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!--<string name="BRAND_ID">6f666893-51b5-4917-aeca-f26a7c7ffe03</string>-->
     <string name="BRAND_ID">6f666893-51b5-4917-aeca-f26a7c7ffe03</string>
     <string name="LOCATION_ID">88f896eb-4290-4f66-9b2a-2020db63a7cb</string>
 </resources>
