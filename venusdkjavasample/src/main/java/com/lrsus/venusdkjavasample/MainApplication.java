@@ -1,5 +1,6 @@
 package com.lrsus.venusdkjavasample;
 
+import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -8,6 +9,9 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 
 import com.lrsus.venusdk.VENUMonitor;
+import com.lrsus.venusdk.VENUMonitorHandler;
+
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Random;
 import java.util.UUID;
@@ -16,7 +20,7 @@ import java.util.UUID;
  * For the main application, we show a notification when the BRAND_ID is heard
  * from the phone.
  */
-public class MainApplication extends VENUMonitor {
+public class MainApplication extends Application implements VENUMonitorHandler {
 
     // Replace the following as necessary per brand and configuration.
     static String APP_NAMESPACE = "com.lrsus.venusdkjavasample";
@@ -25,6 +29,8 @@ public class MainApplication extends VENUMonitor {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        VENUMonitor.getInstance(this).startMonitoring(BRAND_ID, this);
 
         // Initialize notification channel
         createNotificationChannel();
@@ -47,7 +53,7 @@ public class MainApplication extends VENUMonitor {
     }
 
     @Override
-    public void venuDiscovered(Integer locationId) {
+    public void onRegionEntered(@Nullable UUID brandId, @Nullable Integer locationNumber) {
         // We'll set up a notification
         Notification notification = new NotificationCompat.Builder(this, APP_NAMESPACE)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
@@ -61,12 +67,7 @@ public class MainApplication extends VENUMonitor {
     }
 
     @Override
-    public String appNamespace() {
-        return APP_NAMESPACE;
-    }
+    public void onRegionExited(@Nullable UUID brandId, @Nullable Integer locationNumber) {
 
-    @Override
-    public UUID brandId() {
-        return BRAND_ID;
     }
 }

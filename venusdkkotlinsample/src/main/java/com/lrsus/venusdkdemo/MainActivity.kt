@@ -27,6 +27,7 @@ class MainActivity : AppCompatActivity() {
 
     // UI elements
     private lateinit var requestServiceButton : Button
+    private lateinit var startOrderButton: Button
     private lateinit var rangeView : TextView
     private lateinit var venuManager : VENUManager
     private lateinit var mobileId : UUID
@@ -47,6 +48,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         requestServiceButton = findViewById<Button>(R.id.requestServiceButton)
+        startOrderButton = findViewById<Button>(R.id.startOrderButton)
         rangeView = findViewById(R.id.beaconDistance)
         venuManager = VENUManager.getInstance(
                 this,
@@ -79,20 +81,26 @@ class MainActivity : AppCompatActivity() {
                 }
 
         requestServiceButton.setOnClickListener {
-            if (currentLocationId > 0) {
+//            if (currentLocationId > 0) {
                 venuManager.serviceNumber(
                         brandId(),
-                        currentLocationId,
+                        3,
                         mVENUSDKCallback,
                         deviceToken
                 )
-            } else {
-                Toast.makeText(applicationContext, "No location detected.", Toast.LENGTH_SHORT).show()
-            }
+//            } else {
+//                Toast.makeText(applicationContext, "No location detected.", Toast.LENGTH_SHORT).show()
+//            }
         }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(mVENUSDKCallback, IntentFilter(VENUManager.VENU_ACTION))
+        startOrderButton.setOnClickListener {
+            venuManager.getServiceNumber()?.startOrder();
+        }
 
+        // Check for existing service number
+        venuManager.checkForServiceNumber(brandId(), 3, mVENUSDKCallback)
+
+        VENUMessagingService.register(this, mVENUSDKCallback)
         VENURange.startService(this, brandId())
         VENUMessagingService.startService(this)
     }
@@ -106,7 +114,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onDestroy() {
-        LocalBroadcastManager.getInstance(this).unregisterReceiver(mVENUSDKCallback)
+        VENUMessagingService.unregister(this, mVENUSDKCallback)
         super.onDestroy()
     }
 
@@ -115,11 +123,22 @@ class MainActivity : AppCompatActivity() {
      */
     inner class VENUCallbackImplementation : VENUCallback() {
         override fun onServiceNumber(serviceNumber: VENUServiceNumber) {
+            val serviceState = serviceNumber.serviceState
+            val orderState = serviceNumber.orderState
             runOnUiThread {
                 requestServiceButton.isEnabled = false
-                requestServiceButton.text = serviceNumber.number.toString()
+                requestServiceButton.text = if (serviceState == "pending") "waiting" else serviceNumber.number.toString()
+                startOrderButton.isEnabled = orderState == "pending" && serviceState != "pending"
+                startOrderButton.text = if (orderState == "pending") "Start Order" else "Order Started"
             }
+
+            VENUBroadcast.startService(applicationContext, serviceNumber.macAddress())
         }
+
+        override fun onNoServiceNumber(brandId: UUID, siteId: Any, mobileId: UUID?) {
+            Toast.makeText(applicationContext, "No existing service number.", Toast.LENGTH_SHORT).show()
+        }
+
 
         override fun onServiceRequested(serviceNumber: VENUServiceNumber) {
             // Service number has been accepted by server, but not by local server
@@ -129,17 +148,26 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Start broadcasting
-            VENUBroadcast.startService(applicationContext, serviceNumber.macAddress());
+            VENUBroadcast.startService(applicationContext, serviceNumber.macAddress())
         }
 
         override fun onServiceExpiration(serviceNumber: VENUServiceNumber) {
             Toast.makeText(applicationContext, "${serviceNumber.number} expired", Toast.LENGTH_SHORT).show()
+
+            runOnUiThread {
+                requestServiceButton.isEnabled = true
+                requestServiceButton.text = "Request Service Number"
+            }
+
+            // Stop broadcasting
+            VENUBroadcast.stopService(applicationContext);
         }
 
         override fun onServiceAccepted(serviceNumber: VENUServiceNumber) {
             runOnUiThread {
                 requestServiceButton.isEnabled = false
                 requestServiceButton.text = serviceNumber.number.toString()
+                startOrderButton.isEnabled = true
             }
         }
 
@@ -148,13 +176,17 @@ class MainActivity : AppCompatActivity() {
         }
 
         override fun onServiceOrderStarted(serviceNumber: VENUServiceNumber) {
-            Toast.makeText(applicationContext, "${serviceNumber.number} started.", Toast.LENGTH_SHORT).show()
+            Toast.makeText(applicationContext, "${serviceNumber.number} started.", Toast.LENGTH_LONG).show()
+            startOrderButton.isEnabled = false
+            startOrderButton.text = "Order started"
         }
 
         override fun onServiceCleared(serviceNumber: VENUServiceNumber) {
             runOnUiThread {
                 requestServiceButton.isEnabled = true
                 requestServiceButton.text = "Request Service Number"
+                startOrderButton.text = "Start Order";
+                startOrderButton.isEnabled = false
             }
 
             Toast.makeText(applicationContext, "${serviceNumber.number} cleared.", Toast.LENGTH_SHORT).show()
@@ -175,8 +207,8 @@ class MainActivity : AppCompatActivity() {
                 Toast.makeText(applicationContext, "Discovered VENU location", Toast.LENGTH_SHORT).show()
                 currentLocationId = locationId
 
-                // Check for existing service number
-                venuManager.checkForServiceNumber(brandId(), locationId, this)
+//                // Check for existing service number
+//                venuManager.checkForServiceNumber(brandId(), locationId, this)
             }
 
             runOnUiThread {

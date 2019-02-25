@@ -14,41 +14,41 @@ import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.firebase.iid.FirebaseInstanceId;
+import com.lrsus.venusdk.ForegroundNotification;
+import com.lrsus.venusdk.MobileId;
 import com.lrsus.venusdk.VENUBroadcast;
 import com.lrsus.venusdk.VENUCallback;
-import com.lrsus.venusdk.VENURange;
+import com.lrsus.venusdk.VENUManager;
+import com.lrsus.venusdk.VENUMessagingService;
+//import com.lrsus.venusdk.VENURange;
+import com.lrsus.venusdk.VENUServiceListener;
+import com.lrsus.venusdk.VENUServiceNumber;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.Random;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
     private TextView distanceTextView = null;
-    private VENURange myBrandRange = null;
+    private Button requestServiceButton = null;
+    private Button startOrderButton = null;
+//    private VENURange myBrandRange = null;
     private VENUBroadcast venuBroadcast = null;
-
-    private ServiceConnection myBrandRangeServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            // Cast to VENURangeBinder to get the service.
-            myBrandRange = ((VENURange.VENURangeBinder)iBinder).getService();
-            // Set up the callback
-            myBrandRange.setCallback(venuCallback);
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            myBrandRange = null;
-        }
-    };
+    private VENUManager venuManager = null;
 
     private ServiceConnection venuBroadcastServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            // Cast to VENURangeBinder to get the service.
-            venuBroadcast = ((VENUBroadcast.VENUBroadcastBinder)iBinder).getService();
+            VENUBroadcast.VENUBroadcastBinder venuBinder = (VENUBroadcast.VENUBroadcastBinder)iBinder;
 
             // Intent to reopen activity if notification tapped.
             Intent appIntent = new Intent(MainActivity.this, MainActivity.class);
@@ -58,7 +58,7 @@ public class MainActivity extends AppCompatActivity {
                     appIntent,
                     PendingIntent.FLAG_UPDATE_CURRENT);
 
-            Notification myForegroundNotification = new NotificationCompat.Builder(MainActivity.this, MainApplication.APP_NAMESPACE)
+            final Notification myForegroundNotification = new NotificationCompat.Builder(MainActivity.this, MainApplication.APP_NAMESPACE)
                     .setSmallIcon(R.mipmap.ic_launcher)
                     .setContentTitle("VENUSDKJavaSample")
                     .setContentText("Broadcasting...")
@@ -66,14 +66,23 @@ public class MainActivity extends AppCompatActivity {
                     .addAction(
                             android.R.drawable.ic_menu_close_clear_cancel,
                             "clear",
-                            venuBroadcast.stopPendingIntent(getApplicationContext()))
+                            VENUBroadcast.stopPendingIntent(getApplicationContext()))
                     .setContentIntent(pendingAppIntent)
                     .build();
 
-            // Set up the callback
-            venuBroadcast.setCallback(venuCallback);
             // Enable foreground notification
-            venuBroadcast.setForegroundNotification(new Random().nextInt(2342), myForegroundNotification);
+            venuBinder.setForegroundNotification(new ForegroundNotification() {
+                @Nullable
+                @Override
+                public Notification foregroundNotification() {
+                    return myForegroundNotification;
+                }
+
+                @Override
+                public int foregroundNotificationId() {
+                    return 8385;
+                }
+            });
         }
 
         @Override
@@ -83,13 +92,66 @@ public class MainActivity extends AppCompatActivity {
     };
 
     private VENUCallback venuCallback = new VENUCallback() {
+
+        @NotNull
         @Override
-        public void onBroadcast(int serviceNumber) {
+        public VENUManager venuService() {
+            return null;
+        }
+
+        @Override
+        public void onRegionEntered(int locationId, double distance, boolean initial) {
+            // Skipping
+        }
+
+        @Override
+        public void onBroadcast() {
             Toast.makeText(
                     getApplicationContext(),
-                    "Broadcasting with service #" + serviceNumber,
+                    "Broadcasting",
                     Toast.LENGTH_SHORT).show();
         }
+
+        @Override
+        public void onNoServiceNumber(@NotNull UUID brandId, @NotNull Object siteId, @Nullable UUID mobileId) {
+
+        }
+
+        @Override
+        public void onServiceCleared(@NotNull VENUServiceNumber serviceNumber) {
+
+        }
+
+        @Override
+        public void onServiceOrderStarted(@NotNull VENUServiceNumber serviceNumber) {
+
+        }
+
+        @Override
+        public void onServiceLocated(@NotNull VENUServiceNumber serviceNumber) {
+
+        }
+
+        @Override
+        public void onServiceAccepted(@NotNull VENUServiceNumber serviceNumber) {
+
+        }
+
+        @Override
+        public void onServiceExpiration(@NotNull VENUServiceNumber serviceNumber) {
+
+        }
+
+        @Override
+        public void onServiceRequested(@NotNull VENUServiceNumber serviceNumber) {
+
+        }
+
+        @Override
+        public void onServiceNumber(@NotNull VENUServiceNumber serviceNumber) {
+
+        }
+
 
         @Override
         public void onBroadcastFailed(int errorCode) {
@@ -107,29 +169,6 @@ public class MainActivity extends AppCompatActivity {
                     Toast.LENGTH_SHORT).show();
         }
 
-        @Override
-        public void enteredVENULocation(int serviceNumber, int locationId, final double distance, boolean initial) {
-            // Check that the VENUBroadcast service is not already running and that this is the first
-            // enter event.
-            if (initial && venuBroadcast != null && !venuBroadcast.isBroadcasting()) {
-                Toast.makeText(
-                        getApplicationContext(),
-                        "Entered brand location with service #" + serviceNumber,
-                        Toast.LENGTH_SHORT).show();
-
-                // Start broadcast with service number extra
-                Intent broadcastIntent = new Intent(MainActivity.this, VENUBroadcast.class);
-                broadcastIntent.putExtra("ServiceBroadcast", serviceNumber);
-                startService(broadcastIntent);
-            }
-
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    distanceTextView.setText(String.format("%.2f", distance));
-                }
-            });
-        }
 
         @Override
         public void onRegionExited() {
@@ -151,7 +190,14 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        distanceTextView = findViewById(R.id.distanceMeters);
+        requestServiceButton = findViewById(R.id.requestServiceButton);
+        startOrderButton = findViewById(R.id.startOrderButton);
+        venuManager = VENUManager.getInstance(
+                this,
+                getString(R.string.APP_ID).replace("\n", ""),
+                getString(R.string.APP_SECRET).replace("\n", ""),
+                MobileId.get(this)
+        );
     }
 
     @Override
@@ -164,42 +210,62 @@ public class MainActivity extends AppCompatActivity {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 3832);
         }
 
-        // Bind subclassed VENURange service (MyBrandRange)
-        bindService(
-                new Intent(this, MyBrandRange.class),
-                myBrandRangeServiceConnection,
-                Context.BIND_AUTO_CREATE);
-
         // Do the same for VENUBroadcast...
         bindService(
                 new Intent(this, VENUBroadcast.class),
                 venuBroadcastServiceConnection,
                 Context.BIND_AUTO_CREATE);
 
+        requestServiceButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                venuManager.serviceNumber(
+                        MainApplication.BRAND_ID,
+                        3,
+                        venuCallback,
+                        FirebaseInstanceId.getInstance().getToken()
+                );
+            }
+        });
+
+        startOrderButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                if (venuManager.getServiceNumber() != null) {
+                    venuManager.getServiceNumber().startOrder(new VENUServiceListener() {
+                        @Override
+                        public void onServiceChanged() {
+                            // Open new activity
+                            Intent intent = new Intent(MainActivity.this, order_started.class);
+                            MainActivity.this.startActivity(intent);
+                        }
+                    });
+                }
+            }
+        });
+
         // Start VENURange service
-        startService(new Intent(this, MyBrandRange.class));
+//        VENURange.startService(this, MainApplication.BRAND_ID);
+        VENUMessagingService.startService(this);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        VENUMessagingService.register(this, venuCallback);
+    }
+
+    @Override
+    protected void onPause() {
+        VENUMessagingService.unregister(this, venuCallback);
+
+        super.onPause();
     }
 
     @Override
     protected void onStop() {
         super.onStop();
-
-        if (venuBroadcast != null) {
-            // Commenting this out would cause broadcasting to stop when the app goes into the
-            // background. If utilizing foreground notifications, leave this alone.
-//            if (venuBroadcast.isBroadcasting()) {
-//                stopService(new Intent(getApplicationContext(), VENUBroadcast.class));
-//            }
-
-            unbindService(venuBroadcastServiceConnection);
-        }
-
-        if (myBrandRange != null) {
-            if (myBrandRange.isRunning()) {
-                stopService(new Intent(getApplicationContext(), MyBrandRange.class));
-            }
-
-            unbindService(myBrandRangeServiceConnection);
-        }
+        unbindService(venuBroadcastServiceConnection);
+        VENUMessagingService.stopService(this);
     }
 }
