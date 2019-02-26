@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.os.IBinder;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
@@ -19,7 +20,10 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.Task;
 import com.google.firebase.iid.FirebaseInstanceId;
+import com.google.firebase.iid.InstanceIdResult;
 import com.lrsus.venusdk.ForegroundNotification;
 import com.lrsus.venusdk.MobileId;
 import com.lrsus.venusdk.VENUBroadcast;
@@ -44,11 +48,13 @@ public class MainActivity extends AppCompatActivity {
 //    private VENURange myBrandRange = null;
     private VENUBroadcast venuBroadcast = null;
     private VENUManager venuManager = null;
+    private String deviceToken = null;
 
     private ServiceConnection venuBroadcastServiceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
             VENUBroadcast.VENUBroadcastBinder venuBinder = (VENUBroadcast.VENUBroadcastBinder)iBinder;
+            venuBroadcast = venuBinder.getService();
 
             // Intent to reopen activity if notification tapped.
             Intent appIntent = new Intent(MainActivity.this, MainActivity.class);
@@ -96,7 +102,7 @@ public class MainActivity extends AppCompatActivity {
         @NotNull
         @Override
         public VENUManager venuService() {
-            return null;
+            return venuManager;
         }
 
         @Override
@@ -114,27 +120,29 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onNoServiceNumber(@NotNull UUID brandId, @NotNull Object siteId, @Nullable UUID mobileId) {
-
+            requestServiceButton.setEnabled(true);
         }
 
         @Override
         public void onServiceCleared(@NotNull VENUServiceNumber serviceNumber) {
-
+            requestServiceButton.setEnabled(true);
+            startOrderButton.setEnabled(false);
+            VENUBroadcast.stopService(getApplicationContext());
         }
 
         @Override
         public void onServiceOrderStarted(@NotNull VENUServiceNumber serviceNumber) {
-
+            startOrderButton.setEnabled(false);
         }
 
         @Override
         public void onServiceLocated(@NotNull VENUServiceNumber serviceNumber) {
-
+            Toast.makeText(getApplicationContext(), "Got location " + serviceNumber.getLocation(), Toast.LENGTH_SHORT).show();
         }
 
         @Override
         public void onServiceAccepted(@NotNull VENUServiceNumber serviceNumber) {
-
+            startOrderButton.setEnabled(true);
         }
 
         @Override
@@ -144,12 +152,18 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         public void onServiceRequested(@NotNull VENUServiceNumber serviceNumber) {
-
+            requestServiceButton.setEnabled(false);
+            VENUBroadcast.startService(getApplicationContext(), serviceNumber.macAddress());
         }
 
         @Override
         public void onServiceNumber(@NotNull VENUServiceNumber serviceNumber) {
+            requestServiceButton.setEnabled(false);
+            if (serviceNumber.getOrderState().equals("pending")) {
+                startOrderButton.setEnabled(true);
+            }
 
+            VENUBroadcast.startService(getApplicationContext(), serviceNumber.macAddress());
         }
 
 
@@ -216,9 +230,22 @@ public class MainActivity extends AppCompatActivity {
                 venuBroadcastServiceConnection,
                 Context.BIND_AUTO_CREATE);
 
+        FirebaseInstanceId.getInstance().getInstanceId().addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
+            @Override
+            public void onComplete(@NonNull Task<InstanceIdResult> task) {
+                if (task.isSuccessful()) {
+                    deviceToken = task.getResult().getToken();
+                }
+            }
+        });
+
         requestServiceButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
+                if (deviceToken == null) {
+                    Toast.makeText(getApplicationContext(), "No device token provided.", Toast.LENGTH_SHORT);
+                }
+
                 venuManager.serviceNumber(
                         MainApplication.BRAND_ID,
                         3,
@@ -243,6 +270,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         });
+
+        venuManager.checkForServiceNumber(MainApplication.BRAND_ID, 3, venuCallback);
 
         // Start VENURange service
 //        VENURange.startService(this, MainApplication.BRAND_ID);

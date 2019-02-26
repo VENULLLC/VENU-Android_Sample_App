@@ -24,7 +24,8 @@ public class MainApplication extends Application implements VENUMonitorHandler {
 
     // Replace the following as necessary per brand and configuration.
     static String APP_NAMESPACE = "com.lrsus.venusdkjavasample";
-    static UUID BRAND_ID = UUID.fromString("671d3a8e-ee94-4395-9177-d5382d75ff10");
+//    static UUID BRAND_ID = UUID.fromString("671d3a8e-ee94-4395-9177-d5382d75ff10");
+    static UUID BRAND_ID = UUID.fromString("6f666893-51b5-4917-aeca-f26a7c7ffe03");
 
     @Override
     public void onCreate() {
