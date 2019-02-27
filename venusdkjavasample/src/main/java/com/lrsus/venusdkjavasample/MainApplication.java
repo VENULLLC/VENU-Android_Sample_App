@@ -11,8 +11,6 @@ import android.support.v4.app.NotificationManagerCompat;
 import com.lrsus.venusdk.VENUMonitor;
 import com.lrsus.venusdk.VENUMonitorHandler;
 
-import org.jetbrains.annotations.Nullable;
-
 import java.util.Random;
 import java.util.UUID;
 
@@ -54,7 +52,7 @@ public class MainApplication extends Application implements VENUMonitorHandler {
     }
 
     @Override
-    public void onRegionEntered(@Nullable UUID brandId, @Nullable Integer locationNumber) {
+    public void onRegionEntered(UUID brandId, Integer locationNumber) {
         // We'll set up a notification
         Notification notification = new NotificationCompat.Builder(this, APP_NAMESPACE)
                 .setSmallIcon(R.mipmap.ic_launcher_round)
@@ -68,7 +66,7 @@ public class MainApplication extends Application implements VENUMonitorHandler {
     }
 
     @Override
-    public void onRegionExited(@Nullable UUID brandId, @Nullable Integer locationNumber) {
+    public void onRegionExited(UUID brandId, Integer locationNumber) {
 
     }
 }
