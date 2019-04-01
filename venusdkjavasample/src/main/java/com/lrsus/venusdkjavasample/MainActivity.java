@@ -31,6 +31,7 @@ import com.lrsus.venusdk.VENUBroadcast;
 import com.lrsus.venusdk.VENUCallback;
 import com.lrsus.venusdk.VENUManager;
 import com.lrsus.venusdk.VENUMessagingService;
+import com.lrsus.venusdk.VENURange;
 import com.lrsus.venusdk.VENUServiceListener;
 import com.lrsus.venusdk.VENUServiceNumber;
 
@@ -97,11 +98,6 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
         @Override
         public VENUManager venuService() {
             return venuManager;
-        }
-
-        @Override
-        public void onRegionEntered(int locationId, double distance, boolean initial) {
-            // Skipping
         }
 
         @Override
@@ -184,20 +180,15 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
                     Toast.LENGTH_SHORT).show();
         }
 
+        @Override
+        public void onRegionEntered(int locationId, double distance, boolean initial) {
+            Toast.makeText(getApplicationContext(), "Entered location.", Toast.LENGTH_SHORT).show();
+        }
+
 
         @Override
         public void onRegionExited() {
-            // Are we broadcasting?
-            if (venuBroadcast.isBroadcasting()) {
-                stopService(new Intent(getApplicationContext(), VENUBroadcast.class));
-            }
-
-            runOnUiThread(new Runnable() {
-                @Override
-                public void run() {
-                    distanceTextView.setText("Discovering...");
-                }
-            });
+            Toast.makeText(getApplicationContext(), "Exiting location.", Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -269,7 +260,8 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
         venuManager.checkForServiceNumber(MainApplication.BRAND_ID, 3, venuCallback);
 
         // Start VENURange service
-//        VENURange.startService(this, MainApplication.BRAND_ID);
+//        VENURange.startService(this, MainApplication.BRAND_ID, 5.0);
+        VENURange.startService(this, MainApplication.BRAND_ID);
         VENUMessagingService.startService(this);
     }
 
@@ -291,6 +283,7 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
         super.onStop();
         unbindService(venuBroadcastServiceConnection);
         VENUMessagingService.stopService(this);
+        VENURange.stopService(this);
     }
 
     @Override
