@@ -135,7 +135,7 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
 
         @Override
         public void onServiceExpiration(VENUServiceNumber serviceNumber) {
-
+            onServiceCleared(serviceNumber);
         }
 
         @Override

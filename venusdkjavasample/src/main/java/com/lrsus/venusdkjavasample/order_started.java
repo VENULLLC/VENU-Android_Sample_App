@@ -33,7 +33,7 @@ public class order_started extends AppCompatActivity {
 
         @Override
         public void onServiceExpiration(VENUServiceNumber serviceNumber) {
-            order_started.this.finish();
+            onServiceCleared(serviceNumber);
         }
 
         @Override
