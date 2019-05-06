@@ -18,7 +18,6 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.Window;
 import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.tasks.OnCompleteListener;
@@ -26,7 +25,6 @@ import com.google.android.gms.tasks.Task;
 import com.google.firebase.iid.FirebaseInstanceId;
 import com.google.firebase.iid.InstanceIdResult;
 import com.lrsus.venusdk.ForegroundNotification;
-import com.lrsus.venusdk.MobileId;
 import com.lrsus.venusdk.VENUBroadcast;
 import com.lrsus.venusdk.VENUCallback;
 import com.lrsus.venusdk.VENUManager;
@@ -39,12 +37,9 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity implements VENUServiceListener{
 
-    private TextView distanceTextView = null;
     private Button requestServiceButton = null;
     private Button startOrderButton = null;
-//    private VENURange myBrandRange = null;
     private VENUBroadcast venuBroadcast = null;
-    private VENUManager venuManager = null;
     private String deviceToken = null;
 
     private ServiceConnection venuBroadcastServiceConnection = new ServiceConnection() {
@@ -97,7 +92,7 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
 
         @Override
         public VENUManager venuService() {
-            return venuManager;
+            return MainApplication.venuInstance(getApplicationContext());
         }
 
         @Override
@@ -109,7 +104,7 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
         }
 
         @Override
-        public void onNoServiceNumber(UUID brandId, Object siteId, UUID mobileId) {
+        public void onNoServiceNumber() {
             requestServiceButton.setEnabled(true);
         }
 
@@ -145,12 +140,14 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
 
         @Override
         public void onServiceRequested(VENUServiceNumber serviceNumber) {
+            MainApplication.setServiceNumber(serviceNumber);
             requestServiceButton.setEnabled(false);
             VENUBroadcast.startService(getApplicationContext(), serviceNumber.macAddress());
         }
 
         @Override
         public void onServiceNumber(VENUServiceNumber serviceNumber) {
+            MainApplication.setServiceNumber(serviceNumber);
             requestServiceButton.setEnabled(false);
             if (serviceNumber.getOrderState().equals("pending")) {
                 startOrderButton.setEnabled(true);
@@ -199,12 +196,6 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
         setContentView(R.layout.activity_main);
         requestServiceButton = findViewById(R.id.requestServiceButton);
         startOrderButton = findViewById(R.id.startOrderButton);
-        venuManager = VENUManager.getInstance(
-                this,
-                getString(R.string.APP_ID).replace("\n", ""),
-                getString(R.string.APP_SECRET).replace("\n", ""),
-                MobileId.get(this)
-        );
     }
 
     @Override
@@ -239,9 +230,9 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
                     Toast.makeText(getApplicationContext(), "No device token provided.", Toast.LENGTH_SHORT);
                 }
 
-                venuManager.serviceNumber(
+                MainApplication.venuInstance(getApplicationContext()).serviceNumber(
                         MainApplication.BRAND_ID,
-                        3,
+                        Integer.parseInt(getString(R.string.LOCATION_ID)),
                         venuCallback,
                         deviceToken
                 );
@@ -251,17 +242,17 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
         startOrderButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (venuManager.getServiceNumber() != null) {
-                    venuManager.getServiceNumber().startOrder();
+                if (MainApplication.getServiceNumber() != null) {
+                    MainApplication.getServiceNumber().startOrder();
                 }
             }
         });
 
-        venuManager.checkForServiceNumber(MainApplication.BRAND_ID, 3, venuCallback);
+        MainApplication.venuInstance(getApplicationContext()).checkForServiceNumber(MainApplication.BRAND_ID, Integer.parseInt(getString(R.string.LOCATION_ID)), venuCallback);
 
         // Start VENURange service
 //        VENURange.startService(this, MainApplication.BRAND_ID, 5.0);
-        VENURange.startService(this, MainApplication.BRAND_ID);
+//        VENURange.startService(this, MainApplication.BRAND_ID);
         VENUMessagingService.startService(this);
     }
 
@@ -273,9 +264,8 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
 
     @Override
     protected void onPause() {
-        VENUMessagingService.unregister(this, venuCallback);
-
         super.onPause();
+        VENUMessagingService.unregister(this, venuCallback);
     }
 
     @Override
@@ -283,7 +273,7 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
         super.onStop();
         unbindService(venuBroadcastServiceConnection);
         VENUMessagingService.stopService(this);
-        VENURange.stopService(this);
+//        VENURange.stopService(this);
     }
 
     @Override

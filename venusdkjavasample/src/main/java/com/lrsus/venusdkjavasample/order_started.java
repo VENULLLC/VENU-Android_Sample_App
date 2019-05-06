@@ -16,7 +16,7 @@ import java.util.UUID;
 
 public class order_started extends AppCompatActivity {
 
-    VENUManager venuManager = null;
+//    VENUManager venuManager = null;
     OrderBroadcastReceiver receiver = new OrderBroadcastReceiver();
     TextView locationTextView = null;
 
@@ -24,7 +24,6 @@ public class order_started extends AppCompatActivity {
 
         @Override
         public void onServiceNumber(VENUServiceNumber serviceNumber) {
-
         }
 
         @Override
@@ -34,7 +33,7 @@ public class order_started extends AppCompatActivity {
 
         @Override
         public void onServiceExpiration(VENUServiceNumber serviceNumber) {
-
+            order_started.this.finish();
         }
 
         @Override
@@ -86,12 +85,12 @@ public class order_started extends AppCompatActivity {
 
         @Override
         public VENUManager venuService() {
-            return venuManager;
+            return MainApplication.venuInstance(getApplicationContext());
         }
 
         @Override
-        public void onNoServiceNumber(UUID brandId, Object siteId, UUID mobileId) {
-
+        public void onNoServiceNumber() {
+            order_started.this.finish();
         }
     }
 
@@ -101,18 +100,23 @@ public class order_started extends AppCompatActivity {
         setContentView(R.layout.activity_order_started);
         locationTextView = findViewById(R.id.locatedAtTextView);
 
-        venuManager = VENUManager.getInstance(
-                this,
-                getString(R.string.APP_ID).replace("\n", ""),
-                getString(R.string.APP_SECRET).replace("\n", ""),
-                MobileId.get(this)
-        );
+//        venuManager = VENUManager.getInstance(
+//                this,
+//                getString(R.string.APP_ID).replace("\n", ""),
+//                getString(R.string.APP_SECRET).replace("\n", ""),
+//                MobileId.get(this)
+//        );
     }
 
     @Override
     protected void onResume() {
         super.onResume();
         VENUMessagingService.register(this, receiver);
+        MainApplication.venuInstance(getApplicationContext()).checkForServiceNumber(
+                MainApplication.BRAND_ID,
+                Integer.parseInt(getString(R.string.LOCATION_ID)),
+                receiver
+        );
 
         Intent options = getIntent();
         if (options != null && options.hasExtra("currentLocation")) {

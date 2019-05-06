@@ -4,12 +4,16 @@ import android.app.Application;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.content.Context;
 import android.os.Build;
 import android.support.v4.app.NotificationCompat;
 import android.support.v4.app.NotificationManagerCompat;
 
+import com.lrsus.venusdk.MobileId;
+import com.lrsus.venusdk.VENUManager;
 import com.lrsus.venusdk.VENUMonitor;
 import com.lrsus.venusdk.VENUMonitorHandler;
+import com.lrsus.venusdk.VENUServiceNumber;
 
 import java.util.Random;
 import java.util.UUID;
@@ -22,17 +26,40 @@ public class MainApplication extends Application implements VENUMonitorHandler {
 
     // Replace the following as necessary per brand and configuration.
     static String APP_NAMESPACE = "com.lrsus.venusdkjavasample";
-//    static UUID BRAND_ID = UUID.fromString("671d3a8e-ee94-4395-9177-d5382d75ff10");
-    static UUID BRAND_ID = UUID.fromString("6f666893-51b5-4917-aeca-f26a7c7ffe03");
+    static UUID BRAND_ID = UUID.fromString("671d3a8e-ee94-4395-9177-d5382d75ff10");
+    private static VENUManager venuManager = null;
+    private static VENUServiceNumber serviceNumber = null;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        BRAND_ID = UUID.fromString(getString(R.string.BRAND_ID));
 
         VENUMonitor.getInstance(this).startMonitoring(BRAND_ID, this);
 
         // Initialize notification channel
         createNotificationChannel();
+    }
+
+    public static VENUManager venuInstance(Context context) {
+        if (venuManager == null) {
+            venuManager = VENUManager.getInstance(
+                    context,
+                    context.getString(R.string.APP_ID).replace("\n", ""),
+                    context.getString(R.string.APP_SECRET).replace("\n", ""),
+                    MobileId.get(context)
+            );
+        }
+
+        return venuManager;
+    }
+
+    public static VENUServiceNumber getServiceNumber() {
+        return serviceNumber;
+    }
+
+    public static void setServiceNumber(VENUServiceNumber newServiceNumber) {
+        serviceNumber = newServiceNumber;
     }
 
     private void createNotificationChannel() {

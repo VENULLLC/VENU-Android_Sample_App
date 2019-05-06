@@ -1,1 +1,1 @@
-include ':venusdkkotlinsample', ':venusdk', ':venusdkjavasample'
+include ':venusdkjavasample', ':venusdk'
