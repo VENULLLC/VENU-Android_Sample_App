@@ -243,7 +243,12 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
             @Override
             public void onClick(View view) {
                 if (MainApplication.getServiceNumber() != null) {
-                    MainApplication.getServiceNumber().startOrder();
+                    MainApplication.getServiceNumber().startOrder(new VENUServiceListener() {
+                        @Override
+                        public void onServiceChanged() {
+                            Toast.makeText(getApplicationContext(), "Submitting order", Toast.LENGTH_SHORT).show();
+                        }
+                    });
                 }
             }
         });
