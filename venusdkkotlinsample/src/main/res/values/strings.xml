@@ -1,7 +1,0 @@
-<resources>
-    <string name="app_name">VENUDemo</string>
-    <string name="broadcastId">0</string>
-    <string name="channel_id">com.lrsus.venudemo</string>
-    <string name="channel_name">VENU Demo</string>
-    <string name="channel_description">Notification channel for VENU demo app.</string>
-</resources>
