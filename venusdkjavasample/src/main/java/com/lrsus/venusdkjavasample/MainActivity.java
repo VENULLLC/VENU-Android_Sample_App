@@ -1,17 +1,13 @@
 package com.lrsus.venusdkjavasample;
 
 import android.Manifest;
-import android.app.Notification;
-import android.app.PendingIntent;
-import android.content.ComponentName;
+import android.bluetooth.BluetoothAdapter;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.ServiceConnection;
+import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.os.IBinder;
-import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.NotificationCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -20,172 +16,43 @@ import android.view.Window;
 import android.widget.Button;
 import android.widget.Toast;
 
-import com.google.android.gms.tasks.OnCompleteListener;
-import com.google.android.gms.tasks.Task;
-import com.google.firebase.iid.FirebaseInstanceId;
-import com.google.firebase.iid.InstanceIdResult;
-import com.lrsus.venusdk.ForegroundNotification;
-import com.lrsus.venusdk.VENUBroadcast;
 import com.lrsus.venusdk.VENUCallback;
+import com.lrsus.venusdk.VENUError;
 import com.lrsus.venusdk.VENUManager;
-import com.lrsus.venusdk.VENUMessagingService;
-import com.lrsus.venusdk.VENURange;
-import com.lrsus.venusdk.VENUServiceListener;
 import com.lrsus.venusdk.VENUServiceNumber;
+
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity implements VENUServiceListener{
+public class MainActivity extends AppCompatActivity implements VENUCallback {
 
     private Button requestServiceButton = null;
     private Button startOrderButton = null;
-    private VENUBroadcast venuBroadcast = null;
-    private String deviceToken = null;
 
-    private ServiceConnection venuBroadcastServiceConnection = new ServiceConnection() {
-        @Override
-        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
-            VENUBroadcast.VENUBroadcastBinder venuBinder = (VENUBroadcast.VENUBroadcastBinder)iBinder;
-            venuBroadcast = venuBinder.getService();
+    /* Here is where you'd restart broadcasting from VENUManager as well as remind users that their
+     * bluetooth is off.
+     */
+    private final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        public void onReceive (Context context, Intent intent) {
+            String action = intent.getAction();
+            if (BluetoothAdapter.ACTION_STATE_CHANGED.equals(action)) {
+                if(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)
+                        == BluetoothAdapter.STATE_OFF)
+                {
+                    // Bluetooth is disconnected
+                    MainApplication.venuInstance(getApplicationContext()).stopBroadcast(getApplicationContext());
 
-            // Intent to reopen activity if notification tapped.
-            Intent appIntent = new Intent(MainActivity.this, MainActivity.class);
-            PendingIntent pendingAppIntent = PendingIntent.getActivity(
-                    MainActivity.this,
-                    0,
-                    appIntent,
-                    PendingIntent.FLAG_UPDATE_CURRENT);
-
-            final Notification myForegroundNotification = new NotificationCompat.Builder(MainActivity.this, MainApplication.APP_NAMESPACE)
-                    .setSmallIcon(R.mipmap.ic_launcher)
-                    .setContentTitle("VENUSDKJavaSample")
-                    .setContentText("Broadcasting...")
-                    // Action to stop VENUBroadcastService while in the foreground
-                    .addAction(
-                            android.R.drawable.ic_menu_close_clear_cancel,
-                            "clear",
-                            VENUBroadcast.stopPendingIntent(getApplicationContext()))
-                    .setContentIntent(pendingAppIntent)
-                    .build();
-
-            // Enable foreground notification
-            venuBinder.setForegroundNotification(new ForegroundNotification() {
-                @Override
-                public Notification foregroundNotification() {
-                    return myForegroundNotification;
+                    // Let user know. (Probably another way besides using Toast)
+                    Toast.makeText(getApplicationContext(), "Bluetooth not enabled.", Toast.LENGTH_SHORT).show();
+                } else if(intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, -1)
+                        == BluetoothAdapter.STATE_ON)
+                {
+                    // Bluetooth is connected. VENUManager will trigger onBroadcast when the device is in tracking mode.
+                    MainApplication.venuInstance(getApplicationContext()).startBroadcast(getApplicationContext());
                 }
-
-                @Override
-                public int foregroundNotificationId() {
-                    return 8385;
-                }
-            });
-        }
-
-        @Override
-        public void onServiceDisconnected(ComponentName componentName) {
-            venuBroadcast = null;
-        }
-    };
-
-    private VENUCallback venuCallback = new VENUCallback() {
-
-        @Override
-        public VENUManager venuService() {
-            return MainApplication.venuInstance(getApplicationContext());
-        }
-
-        @Override
-        public void onBroadcast() {
-            Toast.makeText(
-                    getApplicationContext(),
-                    "Broadcasting",
-                    Toast.LENGTH_SHORT).show();
-        }
-
-        @Override
-        public void onNoServiceNumber() {
-            requestServiceButton.setEnabled(true);
-        }
-
-        @Override
-        public void onServiceCleared(VENUServiceNumber serviceNumber) {
-            requestServiceButton.setEnabled(true);
-            startOrderButton.setEnabled(false);
-            VENUBroadcast.stopService(getApplicationContext());
-        }
-
-        @Override
-        public void onServiceOrderStarted(VENUServiceNumber serviceNumber) {
-            startOrderButton.setEnabled(false);
-            Intent intent = new Intent(MainActivity.this, order_started.class);
-            intent.putExtra("currentLocation", serviceNumber.getLocation());
-            MainActivity.this.startActivity(intent);
-        }
-
-        @Override
-        public void onServiceLocated(VENUServiceNumber serviceNumber) {
-            Toast.makeText(getApplicationContext(), "Got location " + serviceNumber.getLocation(), Toast.LENGTH_SHORT).show();
-        }
-
-        @Override
-        public void onServiceAccepted(VENUServiceNumber serviceNumber) {
-            startOrderButton.setEnabled(true);
-        }
-
-        @Override
-        public void onServiceExpiration(VENUServiceNumber serviceNumber) {
-            onServiceCleared(serviceNumber);
-        }
-
-        @Override
-        public void onServiceRequested(VENUServiceNumber serviceNumber) {
-            MainApplication.setServiceNumber(serviceNumber);
-            requestServiceButton.setEnabled(false);
-            VENUBroadcast.startService(getApplicationContext(), serviceNumber.macAddress());
-        }
-
-        @Override
-        public void onServiceNumber(VENUServiceNumber serviceNumber) {
-            MainApplication.setServiceNumber(serviceNumber);
-            requestServiceButton.setEnabled(false);
-            if (serviceNumber.getOrderState().equals("pending")) {
-                startOrderButton.setEnabled(true);
-            } else {
-                Intent intent = new Intent(MainActivity.this, order_started.class);
-                intent.putExtra("currentLocation", serviceNumber.getLocation());
-                MainActivity.this.startActivity(intent);
             }
-
-            VENUBroadcast.startService(getApplicationContext(), serviceNumber.macAddress());
-        }
-
-
-        @Override
-        public void onBroadcastFailed(int errorCode) {
-            Toast.makeText(
-                    getApplicationContext(),
-                    "Failed to broadcast with error code " + errorCode,
-                    Toast.LENGTH_SHORT).show();
-        }
-
-        @Override
-        public void onBroadcastStop() {
-            Toast.makeText(
-                    getApplicationContext(),
-                    "Broadcasting stopped.",
-                    Toast.LENGTH_SHORT).show();
-        }
-
-        @Override
-        public void onRegionEntered(int locationId, double distance, boolean initial) {
-            Toast.makeText(getApplicationContext(), "Entered location.", Toast.LENGTH_SHORT).show();
-        }
-
-
-        @Override
-        public void onRegionExited() {
-            Toast.makeText(getApplicationContext(), "Exiting location.", Toast.LENGTH_SHORT).show();
         }
     };
 
@@ -201,85 +68,180 @@ public class MainActivity extends AppCompatActivity implements VENUServiceListen
     @Override
     protected void onStart() {
         super.onStart();
-
-        // Check location permission
+        // Check location permission in order to use Bluetooth.
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             // Request permission
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.ACCESS_COARSE_LOCATION}, 3832);
         }
 
-        // Do the same for VENUBroadcast...
-        bindService(
-                new Intent(this, VENUBroadcast.class),
-                venuBroadcastServiceConnection,
-                Context.BIND_AUTO_CREATE);
-
-        FirebaseInstanceId.getInstance().getInstanceId().addOnCompleteListener(new OnCompleteListener<InstanceIdResult>() {
-            @Override
-            public void onComplete(@NonNull Task<InstanceIdResult> task) {
-                if (task.isSuccessful()) {
-                    deviceToken = task.getResult().getToken();
-                }
-            }
-        });
-
         requestServiceButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (deviceToken == null) {
-                    Toast.makeText(getApplicationContext(), "No device token provided.", Toast.LENGTH_SHORT);
-                }
-
-                MainApplication.venuInstance(getApplicationContext()).serviceNumber(
-                        MainApplication.BRAND_ID,
-                        Integer.parseInt(getString(R.string.LOCATION_ID)),
-                        venuCallback,
-                        deviceToken
-                );
+            MainApplication.venuInstance(getApplicationContext()).startServiceNumber();
             }
         });
 
         startOrderButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (MainApplication.getServiceNumber() != null) {
-                    MainApplication.getServiceNumber().startOrder();
-                }
+            MainApplication.venuInstance(getApplicationContext()).startServiceOrder();
             }
         });
-
-        MainApplication.venuInstance(getApplicationContext()).checkForServiceNumber(MainApplication.BRAND_ID, Integer.parseInt(getString(R.string.LOCATION_ID)), venuCallback);
-
-        // Start VENURange service
-//        VENURange.startService(this, MainApplication.BRAND_ID, 5.0);
-//        VENURange.startService(this, MainApplication.BRAND_ID);
-        VENUMessagingService.startService(this);
     }
 
     @Override
     protected void onResume() {
         super.onResume();
-        VENUMessagingService.register(this, venuCallback);
+        registerReceiver(mReceiver, new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
+        MainApplication.venuInstance(getApplicationContext()).addListener(this);
+        MainApplication.venuInstance( getApplicationContext()).start(UUID.fromString("88b92b5a-211b-47b0-81b3-2db3c56e975a"));
+        MainApplication.venuInstance(getApplicationContext()).serviceOrderStatus();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
-        VENUMessagingService.unregister(this, venuCallback);
+        MainApplication.venuInstance(getApplicationContext()).removeListener(this);
+        MainApplication.venuInstance( getApplicationContext()).stop(getApplicationContext());
+    }
+
+    public void onError(VENUError code, String actionOrEvent) {
+        switch (code) {
+            // If an action is performed such as startServiceOrder() or clearService() without an active service,
+            // VENU controller will notify of no such service. Here, related service expiration logic can be performed.
+            case SERVICE_DOES_NOT_EXIST:
+                requestServiceButton.setEnabled(true);
+                break;
+            case INVALID_SERVICE_EVENT:
+                break;
+            // These codes can indicate that the SDK received an event that it does not know of. This can happen if there's a new
+            // service event that is being sent by the controller.
+            case UNKNOWN_EVENT:
+                break;
+            case INVALID_MESSAGE:
+                break;
+            case INVALID_MESSAGE_TYPE:
+                break;
+            case UNEXPECTED_ERROR:
+                break;
+            // Unable to connect which can indicate issue with mobile or WiFi connectivity.
+            case CONNECTION_ERROR:
+                Toast.makeText(getApplicationContext(), "Unable to connect. Check connection.", Toast.LENGTH_SHORT).show();
+                break;
+            // An action has been performed but it took too long.
+            case ACTION_TIMEOUT:
+                break;
+            // An action was performed but no acknowledgement was received within time.
+            case SERVICE_TIMEOUT:
+                break;
+            // It's recommended to check bluetooth state like in the above. VENUManager will only
+            // produce error when it failed to broadcast. It won't notify you if bluetooth is turned on.
+            case BLUETOOTH_NOT_ENABLED:
+                Toast.makeText(getApplicationContext(), "Bluetooth not enabled.", Toast.LENGTH_SHORT).show();
+                break;
+            // Communication with controller was cut off.
+            case DEVICE_DISCONNECTED:
+                Toast.makeText(getApplicationContext(), "Disconnected.", Toast.LENGTH_SHORT).show();
+                break;
+            // You probably didn't call VENUManager.start(getApplicationContext(), UUID.fromString("[ENTER_YOUR_LOCATION_GUID_HERE]")) before performing an action.
+            case NO_SITE_SET:
+                break;
+        }
+    }
+
+    public void onBroadcast() {
+        Toast.makeText( getApplicationContext(), "Broadcasting", Toast.LENGTH_SHORT).show();
+    }
+
+    public void onServiceCleared(final VENUServiceNumber serviceNumber) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                requestServiceButton.setEnabled(true);
+            }
+        });
+    }
+
+    public void onServiceOrderStarted(final VENUServiceNumber serviceNumber) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                startOrderButton.setEnabled(false);
+                Intent intent = new Intent(MainActivity.this, OrderStartedActivity.class);
+                intent.putExtra("currentLocation", serviceNumber.getLocation());
+                MainActivity.this.startActivity(intent);
+            }
+        });
+    }
+
+    public void onServiceOrderCleared(VENUServiceNumber serviceNumber) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                startOrderButton.setEnabled(true);
+            }
+        });
+    }
+
+    public void onServiceLocated(VENUServiceNumber serviceNumber) {
+        Toast.makeText(getApplicationContext(), "Got location " + serviceNumber.getLocation(), Toast.LENGTH_SHORT).show();
+    }
+
+    public void onServiceAccepted(VENUServiceNumber serviceNumber) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                startOrderButton.setEnabled(true);
+            }
+        });
+    }
+
+    public void onServiceExpiration(VENUServiceNumber serviceNumber) {
+        onServiceCleared(serviceNumber);
+    }
+
+    public void onServiceStatus(@Nullable final VENUServiceNumber serviceNumber) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                requestServiceButton.setEnabled(false);
+            }
+        });
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
-        unbindService(venuBroadcastServiceConnection);
-        VENUMessagingService.stopService(this);
-//        VENURange.stopService(this);
+    public void onOrderStatus(@Nullable final VENUServiceNumber serviceNumber) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                String orderState = serviceNumber.getOrderState();
+                if (orderState.equals("started") || orderState.equals("located")) {
+                    startOrderButton.setEnabled(false);
+                    Intent intent = new Intent(MainActivity.this, OrderStartedActivity.class);
+                    intent.putExtra("currentLocation", serviceNumber.getLocation());
+                    MainActivity.this.startActivity(intent);
+                }
+            }
+        });
     }
 
     @Override
-    public void onServiceChanged() {
-        // Open new activity
-        Intent intent = new Intent(MainActivity.this, order_started.class);
-        MainActivity.this.startActivity(intent);
+    public void onBroadcastStop() {
+        Toast.makeText(
+                getApplicationContext(),
+                "Broadcasting stopped.",
+                Toast.LENGTH_SHORT).show();
     }
+
+    @Override
+    public void onRegionEntered(int locationId, double distance, boolean initial) {
+        Toast.makeText(getApplicationContext(), "Entered location.", Toast.LENGTH_SHORT).show();
+    }
+
+
+    @Override
+    public void onRegionExited() {
+        Toast.makeText(getApplicationContext(), "Exiting location.", Toast.LENGTH_SHORT).show();
+    }
+
 }

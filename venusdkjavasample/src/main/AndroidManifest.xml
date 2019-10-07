@@ -10,7 +10,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <activity android:name=".order_started"></activity>
+        <activity android:name=".OrderStartedActivity"></activity>
         <activity
             android:name=".MainActivity"
             android:launchMode="singleInstance">
