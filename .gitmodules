@@ -1,0 +1,3 @@
+[submodule "venusdk"]
+	path = venusdk
+	url = git@github.com:VENULLLC/VENU-Android-SDK.git
