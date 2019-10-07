@@ -84,9 +84,7 @@ public class MainActivity extends AppCompatActivity implements VENUCallback {
         startOrderButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (MainApplication.getServiceNumber() != null) {
-                    MainApplication.getServiceNumber().startOrder();
-                }
+            MainApplication.venuInstance(getApplicationContext()).startServiceOrder();
             }
         });
     }
@@ -97,14 +95,14 @@ public class MainActivity extends AppCompatActivity implements VENUCallback {
         registerReceiver(mReceiver, new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED));
         MainApplication.venuInstance(getApplicationContext()).addListener(this);
         MainApplication.venuInstance( getApplicationContext()).start(UUID.fromString("88b92b5a-211b-47b0-81b3-2db3c56e975a"));
-        MainApplication.venuInstance(getApplicationContext()).serviceOrderStatus();
+        MainApplication.venuInstance(getApplicationContext()).serviceStatus();
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         MainApplication.venuInstance(getApplicationContext()).removeListener(this);
-        MainApplication.venuInstance( getApplicationContext()).stop(getApplicationContext());
+        MainApplication.venuInstance(getApplicationContext()).stop(getApplicationContext());
     }
 
     public void onError(VENUError code, String actionOrEvent) {
@@ -206,22 +204,14 @@ public class MainActivity extends AppCompatActivity implements VENUCallback {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
-                requestServiceButton.setEnabled(false);
-            }
-        });
-    }
-
-    @Override
-    public void onOrderStatus(@Nullable final VENUServiceNumber serviceNumber) {
-        runOnUiThread(new Runnable() {
-            @Override
-            public void run() {
                 String orderState = serviceNumber.getOrderState();
                 if (orderState.equals("started") || orderState.equals("located")) {
                     startOrderButton.setEnabled(false);
                     Intent intent = new Intent(MainActivity.this, OrderStartedActivity.class);
                     intent.putExtra("currentLocation", serviceNumber.getLocation());
                     MainActivity.this.startActivity(intent);
+                } else if (orderState.equals("cleared") || orderState.equals("pending")) {
+                    startOrderButton.setEnabled(true);
                 }
             }
         });

@@ -32,7 +32,7 @@ public class OrderStartedActivity extends AppCompatActivity implements VENUCallb
         super.onResume();
         MainApplication.venuInstance(getApplicationContext()).addListener(this);
         MainApplication.venuInstance(getApplicationContext()).start(UUID.fromString("972c065f-571c-47c9-a2fa-696c470dbee2"));
-        MainApplication.venuInstance(getApplicationContext()).serviceOrderStatus();
+        MainApplication.venuInstance(getApplicationContext()).serviceStatus();
 
         Intent options = getIntent();
         if (options != null && options.hasExtra("currentLocation")) {
@@ -48,12 +48,7 @@ public class OrderStartedActivity extends AppCompatActivity implements VENUCallb
     }
 
     @Override
-    public void onServiceStatus(@Nullable VENUServiceNumber serviceNumber) {
-
-    }
-
-    @Override
-    public void onOrderStatus(@Nullable final VENUServiceNumber serviceNumber) {
+    public void onServiceStatus(@Nullable final VENUServiceNumber serviceNumber) {
         runOnUiThread(new Runnable() {
             @Override
             public void run() {
