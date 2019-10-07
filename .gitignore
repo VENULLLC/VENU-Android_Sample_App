@@ -33,6 +33,9 @@ proguard/
 # Android Studio captures folder
 captures/
 
+# Merge .orig
+*.orig
+
 # IntelliJ
 *.iml
 .idea/workspace.xml

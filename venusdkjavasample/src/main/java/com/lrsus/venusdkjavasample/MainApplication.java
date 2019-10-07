@@ -35,6 +35,7 @@ public class MainApplication extends Application implements VENUMonitorHandler {
         super.onCreate();
         BRAND_ID = UUID.fromString(getString(R.string.BRAND_ID));
 
+        VENUMonitor.getInstance(this).setForeground(false);
         VENUMonitor.getInstance(this).startMonitoring(BRAND_ID, this);
 
         // Initialize notification channel

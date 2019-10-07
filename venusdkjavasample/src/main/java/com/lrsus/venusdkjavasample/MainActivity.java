@@ -84,7 +84,9 @@ public class MainActivity extends AppCompatActivity implements VENUCallback {
         startOrderButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-            MainApplication.venuInstance(getApplicationContext()).startServiceOrder();
+                if (MainApplication.getServiceNumber() != null) {
+                    MainApplication.getServiceNumber().startOrder();
+                }
             }
         });
     }
