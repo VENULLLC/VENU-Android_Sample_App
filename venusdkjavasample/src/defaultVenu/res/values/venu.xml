@@ -1,0 +1,6 @@
+<resources>
+    <string name="BRAND_ID">ENTER_BRAND_GUID</string>
+    <string name="APP_SECRET">ENTER_APP_SECRET</string>
+    <string name="LOCATION_GUID">ENTER_LOCATION_GUID</string>
+    <string name="APP_ID">com.lrsus.venuanddroidsdk</string>
+</resources>

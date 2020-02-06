@@ -2,8 +2,8 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/VENUSDKAndroidDemo.iml" filepath="$PROJECT_DIR$/VENUSDKAndroidDemo.iml" />
-      <module fileurl="file://$PROJECT_DIR$/venusdk/VENUSDKAndroidDemo-venusdk.iml" filepath="$PROJECT_DIR$/venusdk/VENUSDKAndroidDemo-venusdk.iml" />
+      <module fileurl="file://$PROJECT_DIR$/VENU-Android_Sample_App.iml" filepath="$PROJECT_DIR$/VENU-Android_Sample_App.iml" />
+      <module fileurl="file://$PROJECT_DIR$/venusdk/venusdk.iml" filepath="$PROJECT_DIR$/venusdk/venusdk.iml" />
       <module fileurl="file://$PROJECT_DIR$/venusdkjavasample/venusdkjavasample.iml" filepath="$PROJECT_DIR$/venusdkjavasample/venusdkjavasample.iml" />
     </modules>
   </component>
